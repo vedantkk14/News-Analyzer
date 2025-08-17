@@ -483,6 +483,51 @@
             box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
         }
 
+        .btn-sentiment {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #d97706;
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .btn-sentiment:hover {
+            background: linear-gradient(135deg, #fde68a, #fcd34d);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(217, 119, 6, 0.2);
+        }
+
+        .btn-listen {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid rgba(21, 87, 36, 0.2);
+        }
+
+        .btn-listen:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c3e6cb, #b4dcc2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(21, 87, 36, 0.2);
+        }
+
+        .btn-listen.listening {
+            background: linear-gradient(135deg, #ffeeba, #fff3cd);
+            color: #856404;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .btn-listen.listening::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #856404;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            transform: translate(-50%, -50%);
+            margin-left: 10px;
+        }
+
         .output-area {
             height: 256px;
             display: flex;
@@ -554,6 +599,24 @@
             line-height: 1.7;
             margin: 0;
             font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            animation: buttonsSlideIn 0.5s ease 0.2s both;
+        }
+
+        @keyframes buttonsSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .empty-state {
@@ -695,6 +758,30 @@
             animation: copySuccess 0.3s ease;
         }
 
+        /* TTS not supported warning */
+        .tts-warning {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: #dc2626;
+            font-size: 0.875rem;
+            text-align: center;
+            animation: warningSlide 0.5s ease;
+        }
+
+        @keyframes warningSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Responsive enhancements */
         @media (max-width: 768px) {
             .header h1 {
@@ -723,6 +810,15 @@
             .output-area {
                 height: 200px;
             }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+            }
+
+            .action-buttons .btn {
+                flex: 1;
+                min-width: 120px;
+            }
         }
     </style>
 </head>
@@ -734,7 +830,7 @@
                 <div class="icon"></div>
                 <div>
                     <h1>News Analysis</h1>
-                    <p>Intelligent text summarization tool</p>
+                    <p>Intelligent text summarization & sentiment analysis</p>
                 </div>
             </div>
             <div class="nav-actions">
@@ -806,9 +902,9 @@
                 <p>Get the essence of any text in just 1-2 clear sentences</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon purple">📋</div>
-                <h3>Easy to Use</h3>
-                <p>Simple interface with one-click copying and sharing</p>
+                <div class="feature-icon purple">💭</div>
+                <h3>Sentiment Analysis</h3>
+                <p>Understand the emotional tone and sentiment of your text</p>
             </div>
         </div>
     </main>
@@ -820,6 +916,12 @@
         const resetBtn = document.getElementById('resetBtn');
         const summarizeBtn = document.getElementById('summarizeBtn');
         const outputArea = document.getElementById('outputArea');
+
+        let currentSummary = '';
+        let currentSpeech = null;
+
+        // Check for TTS support
+        const ttsSupported = 'speechSynthesis' in window;
 
         // Text summarization function (modified to use API instead)
         async function summarizeText(text) {
@@ -892,7 +994,7 @@
         // Update character count and button states
         function updateUI() {
             const textLength = inputText.value.length;
-            charCount.textContent = `${textLength.toLocaleString()} characters`;
+            charCount.textContent = textLength.toLocaleString() + ' characters';
             
             // Add active class for character count animation
             if (textLength > 0) {
@@ -918,14 +1020,39 @@
 
         // Show summary result
         function showSummary(summary) {
+            currentSummary = summary;
+
+            localStorage.setItem('news_input', inputText.value);
+            localStorage.setItem('news_summary', summary);
+
+            const escapedSummary = summary.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            
+            let ttsWarning = '';
+            if (!ttsSupported) {
+                ttsWarning = `
+                    <div class="tts-warning">
+                        ⚠ Text-to-Speech is not supported in your browser. The Listen button will be disabled.
+                    </div>
+                `;
+            }
+            
             outputArea.innerHTML = `
                 <div style="width: 100%;">
+                    ${ttsWarning}
                     <div class="summary-box">
                         <p class="summary-text">${summary}</p>
                     </div>
-                    <button onclick="copySummary('${summary.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" class="btn btn-copy">
-                        📋 Copy Summary
-                    </button>
+                    <div class="action-buttons">
+                        <button onclick="copySummary('${escapedSummary}')" class="btn btn-copy">
+                            📋 Copy Summary
+                        </button>
+                        <button onclick="analyzeSentiment('${escapedSummary}')" class="btn btn-sentiment">
+                            💭 Analyze Sentiment
+                        </button>
+                        <button onclick="listenToSummary('${escapedSummary}')" class="btn btn-listen" ${!ttsSupported ? 'disabled' : ''}>
+                            🔊 Listen
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -947,6 +1074,12 @@
 
         // Show empty state
         function showEmptyState() {
+            currentSummary = '';
+            // Stop any ongoing speech
+            if (currentSpeech) {
+                speechSynthesis.cancel();
+                currentSpeech = null;
+            }
             outputArea.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">📄</div>
@@ -989,6 +1122,117 @@
             });
         }
 
+        // Text-to-Speech function
+        function listenToSummary(summaryText) {
+            if (!ttsSupported) {
+                alert('Text-to-Speech is not supported in your browser.');
+                return;
+            }
+
+            const btn = event.target;
+            
+            // If already speaking, stop
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+                btn.classList.remove('listening');
+                btn.innerHTML = '🔊 Listen';
+                currentSpeech = null;
+                return;
+            }
+
+            // Create speech synthesis utterance
+            const utterance = new SpeechSynthesisUtterance(summaryText);
+            
+            // Configure speech settings
+            utterance.rate = 0.9; // Slightly slower for better comprehension
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Try to use a more natural voice if available
+            const voices = speechSynthesis.getVoices();
+            const preferredVoices = voices.filter(voice => 
+                voice.lang.startsWith('en') && 
+                (voice.name.includes('Natural') || 
+                 voice.name.includes('Enhanced') || 
+                 voice.name.includes('Premium') ||
+                 voice.name.includes('Google') ||
+                 voice.name.includes('Microsoft'))
+            );
+            
+            if (preferredVoices.length > 0) {
+                utterance.voice = preferredVoices[0];
+            } else if (voices.length > 0) {
+                // Fallback to first English voice
+                const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+            }
+
+            // Update button state
+            btn.classList.add('listening');
+            btn.innerHTML = '⏹ Stop';
+            currentSpeech = utterance;
+
+            // Handle speech events
+            utterance.onend = () => {
+                btn.classList.remove('listening');
+                btn.innerHTML = '🔊 Listen';
+                currentSpeech = null;
+            };
+
+            utterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event.error);
+                btn.classList.remove('listening');
+                btn.innerHTML = '🔊 Listen';
+                currentSpeech = null;
+                
+                // Show user-friendly error message
+                if (event.error === 'network') {
+                    alert('Network error occurred while trying to speak. Please check your connection and try again.');
+                } else {
+                    alert('An error occurred while trying to speak the text. Please try again.');
+                }
+            };
+
+            utterance.onpause = () => {
+                btn.classList.remove('listening');
+                btn.innerHTML = '🔊 Listen';
+            };
+
+            // Start speaking
+            speechSynthesis.speak(utterance);
+        }
+
+        // Load voices when they become available (some browsers load voices asynchronously)
+        if (ttsSupported) {
+            speechSynthesis.onvoiceschanged = () => {
+                // Voices are now loaded and available
+            };
+        }
+
+        // Analyze sentiment function
+        function analyzeSentiment(summaryText) {
+            // Save to localStorage before redirect
+            localStorage.setItem('news_input', inputText.value);
+            localStorage.setItem('news_summary', summaryText);
+
+            // Redirect to sentiment analysis page
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/sentiment_analysis';
+            form.style.display = 'none';
+
+            const textInput = document.createElement('input');
+            textInput.type = 'hidden';
+            textInput.name = 'summary_text';
+            textInput.value = summaryText;
+
+            form.appendChild(textInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         // Event listeners
         inputText.addEventListener('input', updateUI);
 
@@ -1025,6 +1269,20 @@
             }
         });
 
+        // Stop speech when page is about to unload
+        window.addEventListener('beforeunload', () => {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+        });
+
+        // Stop speech when page loses focus (optional - for better UX)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && speechSynthesis.speaking) {
+                speechSynthesis.pause();
+            }
+        });
+
         // Add shake animation for errors
         const shakeKeyframes = `
             @keyframes shake {
@@ -1041,8 +1299,20 @@
             document.head.appendChild(style);
         }
 
-        // Initialize UI
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedInput = localStorage.getItem('news_input');
+            const savedSummary = localStorage.getItem('news_summary');
+            if (savedInput) {
+                inputText.value = savedInput;
+            }
+            updateUI();
+            if (savedSummary) {
+                showSummary(savedSummary);
+            }
+        });
         updateUI();
     </script>
 </body>
 </html>
+
+
