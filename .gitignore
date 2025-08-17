@@ -1,0 +1,6 @@
+__pycache__/
+.vscode/
+models/
+models2/
+myenv_tf/
+environment.yml/
