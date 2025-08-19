@@ -7,7 +7,7 @@ from functools import lru_cache
 import threading
 import time
 
-# Configure logging
+# Configure loggingṇ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

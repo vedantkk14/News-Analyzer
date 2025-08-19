@@ -5,6 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Analysis App</title>
     <style>
+        :root {
+            /* Light mode variables */
+            --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f3e8ff 100%);
+            --header-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --header-text: white;
+            --header-secondary: rgba(255, 255, 255, 0.8);
+            
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-header-bg: linear-gradient(135deg, #f8faff, #f1f5ff);
+            --card-text: #2d3748;
+            --card-secondary: #718096;
+            --card-border: rgba(102, 126, 234, 0.1);
+            
+            --textarea-bg: rgba(248, 250, 255, 0.8);
+            --textarea-focus-bg: rgba(255, 255, 255, 0.95);
+            --textarea-border: rgba(102, 126, 234, 0.2);
+            --textarea-placeholder: #a0aec0;
+            
+            --output-empty-bg: rgba(248, 250, 255, 0.5);
+            --empty-icon-bg: linear-gradient(135deg, #f7fafc, #edf2f7);
+            --empty-text: #a0aec0;
+            
+            --summary-bg: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(240, 147, 251, 0.05));
+            --summary-border: rgba(102, 126, 234, 0.2);
+            --summary-text: #2d3748;
+            
+            --char-count-bg: rgba(102, 126, 234, 0.1);
+            --char-count-active-bg: rgba(102, 126, 234, 0.2);
+            
+            --feature-bg: rgba(255, 255, 255, 0.9);
+            --feature-text: #2d3748;
+            --feature-secondary: #718096;
+        }
+
+        [data-theme="dark"] {
+            /* Dark mode variables */
+            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1419 100%);
+            --header-gradient: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            --header-text: #e2e8f0;
+            --header-secondary: rgba(226, 232, 240, 0.8);
+            
+            --card-bg: rgba(45, 55, 72, 0.95);
+            --card-header-bg: linear-gradient(135deg, #2d3748, #4a5568);
+            --card-text: #e2e8f0;
+            --card-secondary: #a0aec0;
+            --card-border: rgba(102, 126, 234, 0.3);
+            
+            --textarea-bg: rgba(26, 32, 44, 0.8);
+            --textarea-focus-bg: rgba(45, 55, 72, 0.95);
+            --textarea-border: rgba(102, 126, 234, 0.4);
+            --textarea-placeholder: #718096;
+            
+            --output-empty-bg: rgba(26, 32, 44, 0.5);
+            --empty-icon-bg: linear-gradient(135deg, #2d3748, #4a5568);
+            --empty-text: #718096;
+            
+            --summary-bg: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(240, 147, 251, 0.1));
+            --summary-border: rgba(102, 126, 234, 0.4);
+            --summary-text: #e2e8f0;
+            
+            --char-count-bg: rgba(102, 126, 234, 0.2);
+            --char-count-active-bg: rgba(102, 126, 234, 0.3);
+            
+            --feature-bg: rgba(45, 55, 72, 0.9);
+            --feature-text: #e2e8f0;
+            --feature-secondary: #a0aec0;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,10 +81,11 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f3e8ff 100%);
+            background: var(--bg-gradient);
             min-height: 100vh;
             animation: gradientShift 15s ease infinite;
             background-size: 200% 200%;
+            transition: background 0.5s ease;
         }
 
         @keyframes gradientShift {
@@ -26,12 +95,13 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: var(--header-gradient);
             border-bottom: 1px solid rgba(102, 126, 234, 0.3);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
             animation: slideDown 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+            transition: background 0.5s ease;
         }
 
         .header::before {
@@ -98,7 +168,7 @@
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .nav-btn {
@@ -112,6 +182,10 @@
             cursor: pointer;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .nav-btn:hover {
@@ -138,6 +212,62 @@
             background: #10b981;
             border-radius: 50%;
             animation: pulse 2s infinite;
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 32px;
+        }
+
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 32px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "☀️";
+            height: 26px;
+            width: 26px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider:before {
+            content: "🌙";
+            transform: translateX(28px);
+            background: #1e293b;
+            color: #fbbf24;
         }
 
         .icon {
@@ -185,11 +315,12 @@
         }
 
         .header h1 {
-            color: white;
+            color: var(--header-text);
             font-size: 2rem;
             font-weight: 700;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             position: relative;
+            transition: color 0.5s ease;
         }
 
         .header h1::after {
@@ -210,10 +341,11 @@
         }
 
         .header p {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--header-secondary);
             font-size: 0.95rem;
             font-weight: 400;
             margin-top: 0.25rem;
+            transition: color 0.5s ease;
         }
 
         .main {
@@ -247,13 +379,13 @@
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--card-bg);
             backdrop-filter: blur(20px);
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             animation: cardSlideIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
@@ -300,10 +432,11 @@
 
         .card-header {
             padding: 1.5rem;
-            background: linear-gradient(135deg, #f8faff, #f1f5ff);
-            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            background: var(--card-header-bg);
+            border-bottom: 1px solid var(--card-border);
             position: relative;
             overflow: hidden;
+            transition: all 0.5s ease;
         }
 
         .card-header::after {
@@ -318,20 +451,22 @@
         }
 
         .card-header h2 {
-            color: #2d3748;
+            color: var(--card-text);
             font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
             position: relative;
             z-index: 2;
+            transition: color 0.5s ease;
         }
 
         .card-header p {
-            color: #718096;
+            color: var(--card-secondary);
             font-size: 0.875rem;
             font-weight: 500;
             position: relative;
             z-index: 2;
+            transition: color 0.5s ease;
         }
 
         .card-content {
@@ -342,27 +477,27 @@
             width: 100%;
             height: 256px;
             padding: 1.2rem;
-            border: 2px solid rgba(102, 126, 234, 0.2);
+            border: 2px solid var(--textarea-border);
             border-radius: 16px;
             resize: none;
             font-size: 0.9rem;
             font-family: inherit;
             outline: none;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(248, 250, 255, 0.8);
-            color: #2d3748;
+            background: var(--textarea-bg);
+            color: var(--card-text);
             line-height: 1.6;
         }
 
         .textarea:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--textarea-focus-bg);
             transform: translateY(-2px);
         }
 
         .textarea::placeholder {
-            color: #a0aec0;
+            color: var(--textarea-placeholder);
             font-weight: 400;
         }
 
@@ -386,17 +521,17 @@
         }
 
         .char-count {
-            color: #718096;
+            color: var(--card-secondary);
             font-size: 0.875rem;
             font-weight: 500;
             padding: 0.3rem 0.8rem;
-            background: rgba(102, 126, 234, 0.1);
+            background: var(--char-count-bg);
             border-radius: 20px;
             transition: all 0.3s ease;
         }
 
         .char-count.active {
-            background: rgba(102, 126, 234, 0.2);
+            background: var(--char-count-active-bg);
             color: #667eea;
         }
 
@@ -452,10 +587,20 @@
             border: 1px solid rgba(102, 126, 234, 0.2);
         }
 
+        [data-theme="dark"] .btn-secondary {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: #e2e8f0;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
         .btn-secondary:hover:not(:disabled) {
             background: linear-gradient(135deg, #edf2f7, #e2e8f0);
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .btn-secondary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2d3748, #1a202c);
         }
 
         .btn-primary {
@@ -477,10 +622,20 @@
             border: 1px solid rgba(79, 70, 229, 0.2);
         }
 
+        [data-theme="dark"] .btn-copy {
+            background: linear-gradient(135deg, #3730a3, #4f46e5);
+            color: #e0e7ff;
+            border: 1px solid rgba(224, 231, 255, 0.2);
+        }
+
         .btn-copy:hover {
             background: linear-gradient(135deg, #c7d2fe, #a5b4fc);
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+        }
+
+        [data-theme="dark"] .btn-copy:hover {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
         }
 
         .btn-sentiment {
@@ -489,10 +644,20 @@
             border: 1px solid rgba(217, 119, 6, 0.2);
         }
 
+        [data-theme="dark"] .btn-sentiment {
+            background: linear-gradient(135deg, #92400e, #d97706);
+            color: #fef3c7;
+            border: 1px solid rgba(254, 243, 199, 0.2);
+        }
+
         .btn-sentiment:hover {
             background: linear-gradient(135deg, #fde68a, #fcd34d);
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(217, 119, 6, 0.2);
+        }
+
+        [data-theme="dark"] .btn-sentiment:hover {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
         }
 
         .btn-listen {
@@ -501,16 +666,31 @@
             border: 1px solid rgba(21, 87, 36, 0.2);
         }
 
+        [data-theme="dark"] .btn-listen {
+            background: linear-gradient(135deg, #064e3b, #065f46);
+            color: #d1fae5;
+            border: 1px solid rgba(209, 250, 229, 0.2);
+        }
+
         .btn-listen:hover:not(:disabled) {
             background: linear-gradient(135deg, #c3e6cb, #b4dcc2);
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(21, 87, 36, 0.2);
         }
 
+        [data-theme="dark"] .btn-listen:hover:not(:disabled) {
+            background: linear-gradient(135deg, #065f46, #047857);
+        }
+
         .btn-listen.listening {
             background: linear-gradient(135deg, #ffeeba, #fff3cd);
             color: #856404;
             animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        [data-theme="dark"] .btn-listen.listening {
+            background: linear-gradient(135deg, #78350f, #92400e);
+            color: #fef3c7;
         }
 
         .btn-listen.listening::after {
@@ -520,7 +700,7 @@
             left: 50%;
             width: 20px;
             height: 20px;
-            border: 2px solid #856404;
+            border: 2px solid currentColor;
             border-top: 2px solid transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -534,7 +714,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 16px;
-            background: rgba(248, 250, 255, 0.5);
+            background: var(--output-empty-bg);
             transition: all 0.4s ease;
         }
 
@@ -564,13 +744,14 @@
 
         .summary-box {
             padding: 1.5rem;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(240, 147, 251, 0.05));
-            border: 2px solid rgba(102, 126, 234, 0.2);
+            background: var(--summary-bg);
+            border: 2px solid var(--summary-border);
             border-radius: 16px;
             margin-bottom: 1rem;
             position: relative;
             overflow: hidden;
             animation: summarySlide 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s ease;
         }
 
         @keyframes summarySlide {
@@ -595,10 +776,11 @@
         }
 
         .summary-text {
-            color: #2d3748;
+            color: var(--summary-text);
             line-height: 1.7;
             margin: 0;
             font-weight: 500;
+            transition: color 0.5s ease;
         }
 
         .action-buttons {
@@ -621,8 +803,9 @@
 
         .empty-state {
             text-align: center;
-            color: #a0aec0;
+            color: var(--empty-text);
             animation: breathe 3s ease-in-out infinite;
+            transition: color 0.5s ease;
         }
 
         @keyframes breathe {
@@ -634,14 +817,15 @@
             width: 60px;
             height: 60px;
             margin: 0 auto 1rem;
-            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            background: var(--empty-icon-bg);
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
-            color: #a0aec0;
+            color: var(--empty-text);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.5s ease;
         }
 
         .features {
@@ -655,12 +839,12 @@
         .feature-card {
             text-align: center;
             padding: 2rem 1.5rem;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--feature-bg);
             backdrop-filter: blur(20px);
             border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
@@ -726,11 +910,11 @@
         }
 
         .feature-card h3 {
-            color: #2d3748;
+            color: var(--feature-text);
             font-weight: 700;
             font-size: 1.1rem;
             margin-bottom: 0.8rem;
-            transition: color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .feature-card:hover h3 {
@@ -741,10 +925,11 @@
         }
 
         .feature-card p {
-            color: #718096;
+            color: var(--feature-secondary);
             font-size: 0.875rem;
             line-height: 1.6;
             font-weight: 500;
+            transition: color 0.5s ease;
         }
 
         /* Success animation for copied state */
@@ -769,6 +954,12 @@
             font-size: 0.875rem;
             text-align: center;
             animation: warningSlide 0.5s ease;
+        }
+
+        [data-theme="dark"] .tts-warning {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border: 1px solid rgba(254, 202, 202, 0.3);
+            color: #fecaca;
         }
 
         @keyframes warningSlide {
@@ -819,6 +1010,14 @@
                 flex: 1;
                 min-width: 120px;
             }
+
+            .nav-actions {
+                gap: 1rem;
+            }
+
+            .nav-status span {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -837,7 +1036,11 @@
                 <div class="nav-status">
                     <span>Online</span>
                 </div>
-               <button class="nav-btn" onclick="window.location.href='/'">🏠 Home</button>
+                <label class="theme-toggle">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider"></span>
+                </label>
+                <a href="/" class="nav-btn">🏠 Home</a>
             </div>
         </div>
     </header>
@@ -910,6 +1113,74 @@
     </main>
 
     <script>
+        // Theme Management System
+        class ThemeManager {
+            constructor() {
+                this.themeToggle = document.getElementById('themeToggle');
+                this.init();
+            }
+
+            init() {
+                // Load saved theme or default to light
+                const savedTheme = this.getSavedTheme();
+                this.setTheme(savedTheme);
+                
+                // Set toggle position
+                this.themeToggle.checked = savedTheme === 'dark';
+                
+                // Add event listener
+                this.themeToggle.addEventListener('change', () => {
+                    const newTheme = this.themeToggle.checked ? 'dark' : 'light';
+                    this.setTheme(newTheme);
+                });
+            }
+
+            getSavedTheme() {
+                // Try to get from URL parameters first (for cross-page consistency)
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlTheme = urlParams.get('theme');
+                
+                if (urlTheme && (urlTheme === 'light' || urlTheme === 'dark')) {
+                    this.saveTheme(urlTheme);
+                    return urlTheme;
+                }
+
+                // Fallback to stored preference or system preference
+                const stored = localStorage.getItem('news-analyzer-theme');
+                if (stored) {
+                    return stored;
+                }
+
+                // Default to system preference or light
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                this.saveTheme(theme);
+                
+                // Add theme parameter to all internal links
+                this.updateInternalLinks(theme);
+            }
+
+            saveTheme(theme) {
+                localStorage.setItem('news-analyzer-theme', theme);
+            }
+
+            updateInternalLinks(theme) {
+                // Update all internal links to include theme parameter
+                const internalLinks = document.querySelectorAll('a[href^="/"], a[href^="./"], a[href^="../"]');
+                internalLinks.forEach(link => {
+                    const url = new URL(link.href, window.location.origin);
+                    url.searchParams.set('theme', theme);
+                    link.href = url.toString();
+                });
+            }
+        }
+
+        // Initialize theme management
+        const themeManager = new ThemeManager();
+
         // Get DOM elements
         const inputText = document.getElementById('inputText');
         const charCount = document.getElementById('charCount');
@@ -1013,7 +1284,7 @@
             outputArea.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
-                    <p style="color: #718096; font-weight: 500;">Analyzing text...</p>
+                    <p style="color: var(--card-secondary); font-weight: 500;">Analyzing text...</p>
                 </div>
             `;
         }
@@ -1217,10 +1488,13 @@
             localStorage.setItem('news_input', inputText.value);
             localStorage.setItem('news_summary', summaryText);
 
+            // Get current theme and add to form
+            const currentTheme = localStorage.getItem('news-analyzer-theme') || 'light';
+
             // Redirect to sentiment analysis page
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '/sentiment_analysis';
+            form.action = `/sentiment_analysis?theme=${currentTheme}`;
             form.style.display = 'none';
 
             const textInput = document.createElement('input');
@@ -1299,6 +1573,16 @@
             document.head.appendChild(style);
         }
 
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            // Only update if user hasn't manually set a preference
+            if (!localStorage.getItem('news-analyzer-theme')) {
+                const newTheme = e.matches ? 'dark' : 'light';
+                themeManager.setTheme(newTheme);
+                themeManager.themeToggle.checked = newTheme === 'dark';
+            }
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
             const savedInput = localStorage.getItem('news_input');
             const savedSummary = localStorage.getItem('news_summary');
@@ -1310,9 +1594,8 @@
                 showSummary(savedSummary);
             }
         });
+        
         updateUI();
     </script>
 </body>
 </html>
-
-

@@ -5,6 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentiment Analysis Results</title>
     <style>
+        :root {
+            /* Light mode variables */
+            --bg-primary: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f3e8ff 100%);
+            --bg-header: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-card-header: linear-gradient(135deg, #f8faff, #f1f5ff);
+            --bg-section: rgba(248, 250, 255, 0.8);
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --text-light: rgba(255, 255, 255, 0.8);
+            --border-color: rgba(102, 126, 234, 0.1);
+            --border-card: rgba(255, 255, 255, 0.2);
+            --shadow-card: rgba(0, 0, 0, 0.1);
+            --shadow-nav: rgba(0, 0, 0, 0.3);
+            --btn-secondary-bg: linear-gradient(135deg, #f7fafc, #edf2f7);
+            --btn-secondary-hover: linear-gradient(135deg, #edf2f7, #e2e8f0);
+            
+            /* Sentiment colors (same for both modes) */
+            --positive-bg: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            --positive-border: #10b981;
+            --positive-text: #047857;
+            --negative-bg: linear-gradient(135deg, #fee2e2, #fecaca);
+            --negative-border: #ef4444;
+            --negative-text: #dc2626;
+            --neutral-bg: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            --neutral-border: #6b7280;
+            --neutral-text: #374151;
+        }
+
+        [data-theme="dark"] {
+            /* Dark mode variables */
+            --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            --bg-header: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            --bg-card: rgba(30, 41, 59, 0.95);
+            --bg-card-header: linear-gradient(135deg, #1e293b, #334155);
+            --bg-section: rgba(30, 41, 59, 0.8);
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-light: rgba(241, 245, 249, 0.8);
+            --border-color: rgba(102, 126, 234, 0.3);
+            --border-card: rgba(102, 126, 234, 0.2);
+            --shadow-card: rgba(0, 0, 0, 0.3);
+            --shadow-nav: rgba(0, 0, 0, 0.5);
+            --btn-secondary-bg: linear-gradient(135deg, #334155, #475569);
+            --btn-secondary-hover: linear-gradient(135deg, #475569, #64748b);
+            
+            /* Dark mode sentiment colors */
+            --positive-bg: linear-gradient(135deg, #064e3b, #065f46);
+            --positive-border: #10b981;
+            --positive-text: #6ee7b7;
+            --negative-bg: linear-gradient(135deg, #7f1d1d, #991b1b);
+            --negative-border: #ef4444;
+            --negative-text: #fca5a5;
+            --neutral-bg: linear-gradient(135deg, #374151, #4b5563);
+            --neutral-border: #9ca3af;
+            --neutral-text: #d1d5db;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,10 +71,12 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f3e8ff 100%);
+            background: var(--bg-primary);
             min-height: 100vh;
             animation: gradientShift 15s ease infinite;
             background-size: 200% 200%;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
         }
 
         @keyframes gradientShift {
@@ -26,9 +86,9 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 30px var(--shadow-nav);
             animation: slideDown 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
@@ -121,6 +181,29 @@
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
         }
 
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px) rotate(180deg);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
         .icon {
             width: 50px;
             height: 50px;
@@ -173,7 +256,7 @@
         }
 
         .header p {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--text-light);
             font-size: 0.95rem;
             font-weight: 400;
             margin-top: 0.25rem;
@@ -198,15 +281,16 @@
         }
 
         .result-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--bg-card);
             backdrop-filter: blur(20px);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px var(--shadow-card);
+            border: 1px solid var(--border-card);
             overflow: hidden;
             animation: cardSlideIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             margin-bottom: 2rem;
+            transition: all 0.3s ease;
         }
 
         @keyframes cardSlideIn {
@@ -232,15 +316,17 @@
 
         .card-header {
             padding: 1.5rem;
-            background: linear-gradient(135deg, #f8faff, #f1f5ff);
-            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            background: var(--bg-card-header);
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
         .card-header h2 {
-            color: #2d3748;
+            color: var(--text-primary);
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            transition: color 0.3s ease;
         }
 
         .card-content {
@@ -250,25 +336,28 @@
         .text-section {
             margin-bottom: 2rem;
             padding: 1.5rem;
-            background: rgba(248, 250, 255, 0.8);
+            background: var(--bg-section);
             border-radius: 12px;
             border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
         }
 
         .text-section h3 {
-            color: #2d3748;
+            color: var(--text-primary);
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1px;
+            transition: color 0.3s ease;
         }
 
         .text-content {
-            color: #4a5568;
+            color: var(--text-secondary);
             font-size: 0.95rem;
             line-height: 1.6;
             font-weight: 500;
+            transition: color 0.3s ease;
         }
 
         .sentiment-result {
@@ -285,6 +374,7 @@
             position: relative;
             overflow: hidden;
             animation: sentimentPop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s both;
+            transition: all 0.3s ease;
         }
 
         @keyframes sentimentPop {
@@ -293,21 +383,21 @@
         }
 
         .sentiment-card.positive {
-            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-            border: 2px solid #10b981;
-            color: #047857;
+            background: var(--positive-bg);
+            border: 2px solid var(--positive-border);
+            color: var(--positive-text);
         }
 
         .sentiment-card.negative {
-            background: linear-gradient(135deg, #fee2e2, #fecaca);
-            border: 2px solid #ef4444;
-            color: #dc2626;
+            background: var(--negative-bg);
+            border: 2px solid var(--negative-border);
+            color: var(--negative-text);
         }
 
         .sentiment-card.neutral {
-            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-            border: 2px solid #6b7280;
-            color: #374151;
+            background: var(--neutral-bg);
+            border: 2px solid var(--neutral-border);
+            color: var(--neutral-text);
         }
 
         .sentiment-icon {
@@ -347,6 +437,10 @@
             animation: confidenceRotate 2s ease-in-out;
         }
 
+        [data-theme="dark"] .confidence-circle {
+            background: conic-gradient(from 0deg, #667eea 0%, #764ba2 var(--percentage), #475569 var(--percentage), #475569 100%);
+        }
+
         @keyframes confidenceRotate {
             0% { transform: rotate(-90deg); }
             100% { transform: rotate(0deg); }
@@ -357,20 +451,23 @@
             position: absolute;
             width: 90px;
             height: 90px;
-            background: white;
+            background: var(--bg-card);
             border-radius: 50%;
+            transition: background 0.3s ease;
         }
 
         .confidence-value {
             position: relative;
             z-index: 2;
-            color: #2d3748;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
         }
 
         .confidence-label {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #4a5568;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
         }
 
         .actions {
@@ -440,24 +537,26 @@
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #f7fafc, #edf2f7);
-            color: #4a5568;
-            border: 1px solid rgba(102, 126, 234, 0.2);
+            background: var(--btn-secondary-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
         .btn-secondary:hover {
-            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            background: var(--btn-secondary-hover);
+            box-shadow: 0 8px 20px var(--shadow-card);
         }
 
         .error-card {
-            background: linear-gradient(135deg, #fee2e2, #fecaca);
-            border: 2px solid #ef4444;
+            background: var(--negative-bg);
+            border: 2px solid var(--negative-border);
             border-radius: 16px;
             padding: 2rem;
             text-align: center;
-            color: #dc2626;
+            color: var(--negative-text);
             animation: errorShake 0.5s ease-in-out;
+            transition: all 0.3s ease;
         }
 
         @keyframes errorShake {
@@ -497,6 +596,15 @@
                 width: 75px;
                 height: 75px;
             }
+
+            .nav-actions {
+                gap: 0.5rem;
+            }
+
+            .nav-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -504,7 +612,17 @@
     <!-- Header -->
     <header class="header">
         <div class="header-content">
+            <div class="nav-brand">
+                <div class="icon"></div>
+                <div>
+                    <h1>Sentiment Analysis</h1>
+                    <p>Understand the emotional tone of your text</p>
+                </div>
+            </div>
             <div class="nav-actions">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span id="theme-icon">🌙</span>
+                </button>
                 <a href="/summarizer" class="nav-btn">📄 Back to Summarizer</a>
                 <a href="/" class="nav-btn">🏠 Home</a>
             </div>
@@ -607,6 +725,57 @@
     </main>
 
     <script>
+        // Theme management
+        const THEME_KEY = 'sentiment-analysis-theme';
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme === 'auto' ? (prefersDark ? 'dark' : 'light') : savedTheme;
+            
+            setTheme(theme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeIcon.parentElement.title = 'Switch to light mode';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeIcon.parentElement.title = 'Switch to dark mode';
+            }
+            
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            
+            // Add animation delays for staggered appearance
+            const cards = document.querySelectorAll('.result-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.2}s`;
+            });
+        });
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            const currentTheme = localStorage.getItem(THEME_KEY);
+            if (currentTheme === 'auto' || !currentTheme) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+
         // Function to copy results to clipboard
         function copyResults() {
             const btn = document.getElementById('copyBtn');
@@ -667,14 +836,6 @@ Confidence: ${confidence}%`;
             }
         }
 
-        // Add animation delays for staggered appearance
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.result-card');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.2}s`;
-            });
-        });
-
         // Add hover effects for sentiment cards
         document.querySelectorAll('.sentiment-card').forEach(card => {
             card.addEventListener('mouseenter', function() {
@@ -687,11 +848,4 @@ Confidence: ${confidence}%`;
         });
     </script>
 </body>
-</html> class="nav-brand">
-                <div class="icon"></div>
-                <div>
-                    <h1>Sentiment Analysis</h1>
-                    <p>Understand the emotional tone of your text</p>
-                </div>
-            </div>
-            <div
+</html>
