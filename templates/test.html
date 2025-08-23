@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test</title>
+    <style>
+      /* Dark Mode Toggle */
+      .theme-toggle {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 32px;
+      }
+
+      .theme-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 32px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "☀️";
+        height: 26px;
+        width: 26px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      input:checked + .slider {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      input:checked + .slider:before {
+        content: "🌙";
+        transform: translateX(28px);
+        background: #1e293b;
+        color: #fbbf24;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>📰 Top 5 News</h1>
+    <div class="news-container">
+      {% if news %} {% for article in news %}
+      <div class="news-card">
+        <h2>
+          <a href="{{ article['url'] }}" target="_blank"
+            >{{ article['title'] }}</a
+          >
+        </h2>
+        <p>{{ article['description'] }}</p>
+        {% if article['image'] %}
+        <img src="{{ article['image'] }}" alt="News Image" />
+        {% endif %}
+      </div>
+      {% endfor %} {% else %}
+      <p>No news available right now. Please try again later.</p>
+      {% endif %}
+    </div>
+  </body>
+</html>
