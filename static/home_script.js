@@ -1,123 +1,170 @@
-        // Theme Management System
-        class ThemeManager {
-            constructor() {
-                this.themeToggle = document.getElementById('themeToggle');
-                this.init();
-            }
+// Theme Toggle Functionality
+const themeToggle = document.getElementById("themeToggle");
+const body = document.body;
 
-            init() {
-                // Load saved theme or default to light
-                const savedTheme = this.getSavedTheme();
-                this.setTheme(savedTheme);
-                
-                // Set toggle position
-                this.themeToggle.checked = savedTheme === 'dark';
-                
-                // Add event listener
-                this.themeToggle.addEventListener('change', () => {
-                    const newTheme = this.themeToggle.checked ? 'dark' : 'light';
-                    this.setTheme(newTheme);
-                });
-            }
+// Check for saved theme preference or default to 'dark'
+const currentTheme = localStorage.getItem("theme") || "dark";
+if (currentTheme === "light") {
+  body.setAttribute("data-theme", "light");
+  themeToggle.checked = true;
+}
 
-            getSavedTheme() {
-                // Try to get from URL parameters first (for cross-page consistency)
-                const urlParams = new URLSearchParams(window.location.search);
-                const urlTheme = urlParams.get('theme');
-                
-                if (urlTheme && (urlTheme === 'light' || urlTheme === 'dark')) {
-                    this.saveTheme(urlTheme);
-                    return urlTheme;
-                }
+themeToggle.addEventListener("change", function () {
+  if (this.checked) {
+    body.setAttribute("data-theme", "light");
+    localStorage.setItem("theme", "light");
+  } else {
+    body.removeAttribute("data-theme");
+    localStorage.setItem("theme", "dark");
+  }
+});
 
-                // Fallback to stored preference or system preference
-                const stored = localStorage.getItem('news-analyzer-theme');
-                if (stored) {
-                    return stored;
-                }
+// Alternative: Use NewsAPI.org (free tier available)
+// Sign up at https://newsapi.org/ and replace 'YOUR_NEWSAPI_KEY' with your actual key
+// const NEWS_API_KEY = 'YOUR_NEWSAPI_KEY';
+// const NEWSAPI_URL = `https://newsapi.org/v2/top-headlines?country=us&pageSize=5&apiKey=${NEWS_API_KEY}`;
+// const API_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(NEWSAPI_URL)}`;
 
-                // Default to system preference or light
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
+// Using GNews with CORS proxy
+const API_KEY = "133bb93beaeb9f5cfc91ea8efee7b0c4";
+const GNEWS_URL = `https://gnews.io/api/v4/top-headlines?token=${API_KEY}&lang=en&max=5`;
+const API_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+  GNEWS_URL
+)}`;
 
-            setTheme(theme) {
-                document.documentElement.setAttribute('data-theme', theme);
-                this.saveTheme(theme);
-                
-                // Add theme parameter to all internal links
-                this.updateInternalLinks(theme);
-            }
+let newsCache = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
-            saveTheme(theme) {
-                localStorage.setItem('news-analyzer-theme', theme);
-            }
+async function fetchNews() {
+  const now = Date.now();
 
-            updateInternalLinks(theme) {
-                // Update all internal links to include theme parameter
-                const internalLinks = document.querySelectorAll('a[href^="/"], a[href^="./"], a[href^="../"]');
-                internalLinks.forEach(link => {
-                    const url = new URL(link.href, window.location.origin);
-                    url.searchParams.set('theme', theme);
-                    link.href = url.toString();
-                });
-            }
-        }
+  // Use cache if available and not expired
+  if (newsCache && now - lastFetchTime < CACHE_DURATION) {
+    return newsCache;
+  }
 
-        // Initialize theme management
-        const themeManager = new ThemeManager();
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
 
-        // Add smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
+    // Cache the results
+    newsCache = data;
+    lastFetchTime = now;
 
-        // Animate stats on scroll
-        const observerOptions = {
-            threshold: 0.5,
-            rootMargin: '0px 0px -50px 0px'
-        };
+    return data;
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    throw error;
+  }
+}
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animationPlayState = 'running';
-                }
-            });
-        }, observerOptions);
+function formatTimeAgo(dateString) {
+  const now = new Date();
+  const publishTime = new Date(dateString);
+  const diffInMinutes = Math.floor((now - publishTime) / (1000 * 60));
 
-        document.querySelectorAll('.stat-number').forEach(stat => {
-            observer.observe(stat);
-        });
+  if (diffInMinutes < 1) return "Just now";
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
 
-        // Add loading state for CTA button
-        document.querySelector('.cta-primary').addEventListener('click', function(e) {
-            const btn = this;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Loading...';
-            btn.style.pointerEvents = 'none';
-            
-            // Restore button after a short delay (in case navigation is slow)
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.style.pointerEvents = 'auto';
-            }, 3000);
-        });
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
 
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            // Only update if user hasn't manually set a preference
-            if (!localStorage.getItem('news-analyzer-theme')) {
-                const newTheme = e.matches ? 'dark' : 'light';
-                themeManager.setTheme(newTheme);
-                themeManager.themeToggle.checked = newTheme === 'dark';
-            }
-        });
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+
+  return publishTime.toLocaleDateString();
+}
+
+function displayNews(articles) {
+  const container = document.getElementById("newsContainer");
+
+  if (!articles || articles.length === 0) {
+    container.innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">📰</div>
+                        <h3>No news articles available</h3>
+                        <p>Unable to fetch news articles at the moment. Please try again later.</p>
+                    </div>
+                `;
+    return;
+  }
+
+  const newsHTML = articles
+    .map((article) => {
+      const timeAgo = formatTimeAgo(article.publishedAt);
+      const source = article.source?.name || "Unknown Source";
+
+      return `
+                    <div class="news-item">
+                        <h3><a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.title}</a></h3>
+                        <div class="news-meta">
+                            <span class="news-source">${source}</span>
+                            <span class="news-time">🕐 ${timeAgo}</span>
+                        </div>
+                    </div>
+                `;
+    })
+    .join("");
+
+  container.innerHTML = `<div class="news-grid">${newsHTML}</div>`;
+}
+
+function displayError() {
+  const container = document.getElementById("newsContainer");
+  container.innerHTML = `
+                <div class="error-message">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Unable to fetch news</h3>
+                    <p>Unable to fetch news at the moment. Please try again later.</p>
+                </div>
+            `;
+}
+
+function showLoading() {
+  const container = document.getElementById("newsContainer");
+  container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            `;
+}
+
+async function loadNews() {
+  const refreshBtn = document.getElementById("refreshNews");
+  const refreshIcon = refreshBtn.querySelector(".refresh-icon");
+
+  try {
+    refreshBtn.classList.add("loading");
+    refreshBtn.disabled = true;
+    showLoading();
+
+    const data = await fetchNews();
+    displayNews(data.articles);
+  } catch (error) {
+    console.error("Error loading news:", error);
+    displayError();
+  } finally {
+    refreshBtn.classList.remove("loading");
+    refreshBtn.disabled = false;
+  }
+}
+
+// Event Listeners
+document.getElementById("refreshNews").addEventListener("click", () => {
+  // Clear cache to force fresh fetch
+  newsCache = null;
+  lastFetchTime = 0;
+  loadNews();
+});
+
+// Load news on page load
+document.addEventListener("DOMContentLoaded", loadNews);
+
+// Auto-refresh news every 10 minutes
+setInterval(() => {
+  loadNews();
+}, 10 * 60 * 1000);

@@ -7,6 +7,7 @@ from functools import lru_cache
 import threading
 import time
 import hashlib
+import requests  # Add this import for API calls
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -14,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+
+# News API Configuration
+GNEWS_API_KEY = '133bb93beaeb9f5cfc91ea8efee7b0c4'
+GNEWS_BASE_URL = 'https://gnews.io/api/v4'
 
 # Global variables for model components
 model_lock = threading.Lock()
@@ -209,6 +214,10 @@ class ModelManager:
 # Initialize model manager
 model_manager = ModelManager()
 
+# News API caching
+news_cache = {}
+CACHE_DURATION = 10 * 60  # 10 minutes in seconds
+
 def get_text_hash(text):
     """Generate hash for text caching"""
     return hashlib.md5(text.encode('utf-8')).hexdigest()
@@ -230,6 +239,41 @@ def cached_summarize(text_hash, original_text, summary_type="detailed", min_len=
     except Exception as e:
         logger.error(f"Error during cached summarization: {str(e)}")
         return None
+
+def fetch_gnews_data(endpoint, params):
+    """Fetch data from GNews API with error handling"""
+    try:
+        url = f"{GNEWS_BASE_URL}/{endpoint}"
+        params['token'] = GNEWS_API_KEY
+        
+        logger.info(f"Fetching news from: {url}")
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        # Check if API returned an error
+        if 'errors' in data:
+            logger.error(f"GNews API error: {data['errors']}")
+            return None, f"News API error: {data['errors']}"
+        
+        return data, None
+        
+    except requests.exceptions.Timeout:
+        logger.error("News API request timeout")
+        return None, "News service timeout - please try again"
+    except requests.exceptions.ConnectionError:
+        logger.error("News API connection error")
+        return None, "Unable to connect to news service"
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"News API HTTP error: {e}")
+        return None, f"News service error: {e.response.status_code}"
+    except requests.exceptions.RequestException as e:
+        logger.error(f"News API request error: {e}")
+        return None, "News service unavailable"
+    except Exception as e:
+        logger.error(f"Unexpected error fetching news: {e}")
+        return None, "Unexpected error occurred"
 
 def validate_text(text):
     """Validate input text"""
@@ -403,6 +447,181 @@ def summarizer_page():
     """Summarizer tool page"""
     return render_template("summarizer_page.html")
 
+# NEW: News API Endpoints
+@app.route("/api/news", methods=["GET"])
+def get_latest_news():
+    """Get latest news headlines"""
+    try:
+        # Check cache first
+        current_time = time.time()
+        if 'headlines' in news_cache:
+            cache_time = news_cache['headlines'].get('timestamp', 0)
+            if current_time - cache_time < CACHE_DURATION:
+                logger.info("Returning cached news headlines")
+                return jsonify(news_cache['headlines']['data'])
+        
+        # Fetch fresh data from GNews API
+        params = {
+            'lang': 'en',
+            'max': 5,
+            'sortby': 'publishedAt'
+        }
+        
+        data, error = fetch_gnews_data('top-headlines', params)
+        
+        if error:
+            return jsonify({
+                'error': error,
+                'articles': [],
+                'cached': False
+            }), 500
+        
+        # Cache the results
+        news_cache['headlines'] = {
+            'data': {
+                'articles': data.get('articles', []),
+                'totalArticles': data.get('totalArticles', 0),
+                'cached': False
+            },
+            'timestamp': current_time
+        }
+        
+        logger.info(f"Fetched {len(data.get('articles', []))} news articles")
+        
+        return jsonify(news_cache['headlines']['data'])
+        
+    except Exception as e:
+        logger.error(f"Error in news endpoint: {str(e)}")
+        return jsonify({
+            'error': 'Unable to fetch news at the moment. Please try again later.',
+            'articles': [],
+            'cached': False
+        }), 500
+
+@app.route("/api/news/search", methods=["GET"])
+def search_news():
+    """Search news by query"""
+    try:
+        query = request.args.get('q', '')
+        max_results = min(int(request.args.get('max', 10)), 50)  # Limit to 50 max
+        
+        if not query.strip():
+            return jsonify({'error': 'Query parameter is required'}), 400
+        
+        # Check cache
+        cache_key = f"search_{hashlib.md5(query.encode()).hexdigest()}_{max_results}"
+        current_time = time.time()
+        
+        if cache_key in news_cache:
+            cache_time = news_cache[cache_key].get('timestamp', 0)
+            if current_time - cache_time < CACHE_DURATION:
+                logger.info(f"Returning cached search results for: {query}")
+                return jsonify(news_cache[cache_key]['data'])
+        
+        # Fetch from API
+        params = {
+            'q': query,
+            'lang': 'en',
+            'max': max_results,
+            'sortby': 'publishedAt'
+        }
+        
+        data, error = fetch_gnews_data('search', params)
+        
+        if error:
+            return jsonify({
+                'error': error,
+                'articles': [],
+                'query': query,
+                'cached': False
+            }), 500
+        
+        # Cache results
+        result_data = {
+            'articles': data.get('articles', []),
+            'totalArticles': data.get('totalArticles', 0),
+            'query': query,
+            'cached': False
+        }
+        
+        news_cache[cache_key] = {
+            'data': result_data,
+            'timestamp': current_time
+        }
+        
+        return jsonify(result_data)
+        
+    except Exception as e:
+        logger.error(f"Error in news search endpoint: {str(e)}")
+        return jsonify({
+            'error': 'Search unavailable at the moment. Please try again later.',
+            'articles': [],
+            'query': query if 'query' in locals() else '',
+            'cached': False
+        }), 500
+
+@app.route("/api/news/categories", methods=["GET"])
+def get_news_by_category():
+    """Get news by category"""
+    try:
+        category = request.args.get('category', 'general')
+        max_results = min(int(request.args.get('max', 10)), 50)
+        
+        valid_categories = ['general', 'world', 'nation', 'business', 'technology', 'entertainment', 'sports', 'science', 'health']
+        if category not in valid_categories:
+            return jsonify({'error': f'Invalid category. Valid options: {", ".join(valid_categories)}'}), 400
+        
+        # Check cache
+        cache_key = f"category_{category}_{max_results}"
+        current_time = time.time()
+        
+        if cache_key in news_cache:
+            cache_time = news_cache[cache_key].get('timestamp', 0)
+            if current_time - cache_time < CACHE_DURATION:
+                return jsonify(news_cache[cache_key]['data'])
+        
+        # Fetch from API
+        params = {
+            'category': category,
+            'lang': 'en',
+            'max': max_results,
+            'sortby': 'publishedAt'
+        }
+        
+        data, error = fetch_gnews_data('top-headlines', params)
+        
+        if error:
+            return jsonify({
+                'error': error,
+                'articles': [],
+                'category': category,
+                'cached': False
+            }), 500
+        
+        # Cache results
+        result_data = {
+            'articles': data.get('articles', []),
+            'totalArticles': data.get('totalArticles', 0),
+            'category': category,
+            'cached': False
+        }
+        
+        news_cache[cache_key] = {
+            'data': result_data,
+            'timestamp': current_time
+        }
+        
+        return jsonify(result_data)
+        
+    except Exception as e:
+        logger.error(f"Error in category news endpoint: {str(e)}")
+        return jsonify({
+            'error': 'Category news unavailable at the moment.',
+            'articles': [],
+            'category': category if 'category' in locals() else 'general',
+            'cached': False
+        }), 500
+
 @app.route("/summarize", methods=["POST"])
 def summarize():
     """Enhanced summarization endpoint with multi-style support"""
@@ -536,6 +755,7 @@ def health_check():
         "oneliner_summarizer_loaded": model_manager.oneliner_loaded,
         "sentiment_loaded": model_manager.sentiment_loaded,
         "loading_status": model_manager.loading_status,
+        "news_cache_size": len(news_cache),
         "timestamp": time.time()
     })
 
@@ -558,7 +778,8 @@ def get_stats():
         "oneliner_summarizer_status": "loaded" if model_manager.oneliner_loaded else "not_loaded",
         "sentiment_status": "loaded" if model_manager.sentiment_loaded else "not_loaded",
         "loading_status": model_manager.loading_status,
-        "cache_info": cache_info
+        "cache_info": cache_info,
+        "news_cache_entries": len(news_cache)
     })
 
 @app.route('/summarize_pegasus', methods=['POST'])
@@ -597,11 +818,272 @@ def summarize_pegasus():
         logger.error(f"Error in summarize_pegasus endpoint: {str(e)}")
         return jsonify({'error': 'Internal server error occurred'}), 500
 
+@app.route('/summarize_bart', methods=['POST'])
+def summarize_bart():
+    """Legacy endpoint for BART summarization"""
+    try:
+        if request.is_json:
+            data = request.get_json()
+            text = data.get('text', '')
+        else:
+            text = request.form.get('text', '')
+            
+        if not text.strip():
+            return jsonify({'error': 'No text provided'}), 400
+
+        # Validate text
+        is_valid, result = validate_text(text)
+        if not is_valid:
+            return jsonify({'error': result}), 400
+        
+        text = result
+
+        # Use the improved summarization function for detailed summary
+        summary_result, error = generate_summary(text, "detailed")
+        
+        if error:
+            return jsonify({'error': error}), 500
+            
+        return jsonify({
+            'summary': summary_result['summary'],
+            'model_used': summary_result['model_used'],
+            'processing_time': summary_result['processing_time'],
+            'compression_ratio': summary_result['compression_ratio']
+        })
+
+    except Exception as e:
+        logger.error(f"Error in summarize_bart endpoint: {str(e)}")
+        return jsonify({'error': 'Internal server error occurred'}), 500
+
+@app.route("/api/news/summarize", methods=["POST"])
+def summarize_news_article():
+    """Summarize a news article from URL or content"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        article_url = data.get("url", "")
+        article_content = data.get("content", "")
+        summary_type = data.get("summary_type", "detailed").lower()
+        
+        # Validate summary type
+        if summary_type not in ["oneliner", "detailed"]:
+            return jsonify({"error": "Invalid summary type. Use 'oneliner' or 'detailed'"}), 400
+        
+        # If URL is provided, try to fetch content (placeholder for now)
+        if article_url and not article_content:
+            # In a real implementation, you'd scrape the article content from the URL
+            # For now, return an error asking for direct content
+            return jsonify({
+                "error": "URL scraping not implemented. Please provide article content directly.",
+                "suggestion": "Use the 'content' field to provide the article text directly."
+            }), 400
+        
+        if not article_content:
+            return jsonify({"error": "No article content provided"}), 400
+        
+        # Validate content
+        is_valid, result = validate_text(article_content)
+        if not is_valid:
+            return jsonify({"error": result}), 400
+        
+        article_content = result
+        
+        # Generate summary
+        summary_result, error = generate_summary(article_content, summary_type)
+        
+        if error:
+            return jsonify({"error": error}), 500
+        
+        # Add sentiment analysis to the summary
+        sentiment_result, sentiment_error = analyze_sentiment(summary_result['summary'])
+        
+        response_data = summary_result.copy()
+        
+        if sentiment_result and not sentiment_error:
+            response_data['sentiment_analysis'] = {
+                'sentiment': sentiment_result['sentiment'],
+                'confidence': sentiment_result['confidence']
+            }
+        elif sentiment_error:
+            response_data['sentiment_analysis'] = {
+                'error': sentiment_error
+            }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in news summarization endpoint: {str(e)}")
+        return jsonify({"error": "Internal server error occurred"}), 500
+
+@app.route("/api/models/load", methods=["POST"])
+def load_models():
+    """Manually trigger model loading"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        model_type = data.get("model_type", "all").lower()
+        
+        valid_types = ["all", "detailed", "oneliner", "sentiment"]
+        if model_type not in valid_types:
+            return jsonify({"error": f"Invalid model type. Valid options: {', '.join(valid_types)}"}), 400
+        
+        results = {}
+        
+        if model_type in ["all", "detailed"]:
+            success = model_manager.load_detailed_summarizer_model()
+            results['detailed_summarizer'] = "loaded" if success else "failed"
+        
+        if model_type in ["all", "oneliner"]:
+            success = model_manager.load_oneliner_summarizer_model()
+            results['oneliner_summarizer'] = "loaded" if success else "failed"
+        
+        if model_type in ["all", "sentiment"]:
+            success = model_manager.load_sentiment_model()
+            results['sentiment_analyzer'] = "loaded" if success else "failed"
+        
+        return jsonify({
+            "message": f"Model loading triggered for: {model_type}",
+            "results": results,
+            "current_status": {
+                "detailed_loaded": model_manager.detailed_loaded,
+                "oneliner_loaded": model_manager.oneliner_loaded,
+                "sentiment_loaded": model_manager.sentiment_loaded
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in model loading endpoint: {str(e)}")
+        return jsonify({"error": "Internal server error occurred"}), 500
+
+@app.route("/api/cache/clear", methods=["POST"])
+def clear_cache():
+    """Clear various caches"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        cache_type = data.get("cache_type", "all").lower()
+        
+        valid_types = ["all", "news", "summary"]
+        if cache_type not in valid_types:
+            return jsonify({"error": f"Invalid cache type. Valid options: {', '.join(valid_types)}"}), 400
+        
+        cleared = []
+        
+        if cache_type in ["all", "news"]:
+            news_cache.clear()
+            cleared.append("news_cache")
+        
+        if cache_type in ["all", "summary"]:
+            cached_summarize.cache_clear()
+            cleared.append("summary_cache")
+        
+        return jsonify({
+            "message": f"Cache cleared: {', '.join(cleared)}",
+            "cache_type": cache_type,
+            "cleared_caches": cleared
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing cache: {str(e)}")
+        return jsonify({"error": "Internal server error occurred"}), 500
+
+@app.route("/api/batch/summarize", methods=["POST"])
+def batch_summarize():
+    """Batch summarization endpoint for multiple texts"""
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        texts = data.get("texts", [])
+        summary_type = data.get("summary_type", "detailed").lower()
+        max_items = min(len(texts), 10)  # Limit to 10 items max
+        
+        if not texts or not isinstance(texts, list):
+            return jsonify({"error": "Texts must be provided as a list"}), 400
+        
+        if len(texts) == 0:
+            return jsonify({"error": "No texts provided"}), 400
+        
+        if summary_type not in ["oneliner", "detailed"]:
+            return jsonify({"error": "Invalid summary type. Use 'oneliner' or 'detailed'"}), 400
+        
+        results = []
+        errors = []
+        
+        for i, text in enumerate(texts[:max_items]):
+            try:
+                # Validate text
+                is_valid, validated_text = validate_text(text)
+                if not is_valid:
+                    errors.append({
+                        "index": i,
+                        "error": validated_text,
+                        "original_text_preview": text[:100] + "..." if len(text) > 100 else text
+                    })
+                    continue
+                
+                # Generate summary
+                summary_result, error = generate_summary(validated_text, summary_type)
+                
+                if error:
+                    errors.append({
+                        "index": i,
+                        "error": error,
+                        "original_text_preview": text[:100] + "..." if len(text) > 100 else text
+                    })
+                    continue
+                
+                results.append({
+                    "index": i,
+                    "summary": summary_result['summary'],
+                    "original_length": summary_result['original_length'],
+                    "summary_length": summary_result['summary_length'],
+                    "compression_ratio": summary_result['compression_ratio'],
+                    "model_used": summary_result['model_used']
+                })
+                
+            except Exception as e:
+                errors.append({
+                    "index": i,
+                    "error": f"Processing error: {str(e)}",
+                    "original_text_preview": text[:100] + "..." if len(text) > 100 else text
+                })
+        
+        return jsonify({
+            "processed": len(results),
+            "errors": len(errors),
+            "total_submitted": min(len(texts), max_items),
+            "max_items_limit": max_items,
+            "summary_type": summary_type,
+            "results": results,
+            "errors": errors if errors else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in batch summarize endpoint: {str(e)}")
+        return jsonify({"error": "Internal server error occurred"}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
     return jsonify({"error": "Endpoint not found", "available_endpoints": [
-        "/", "/summarizer", "/summarize", "/analyze_sentiment", "/health", "/stats"
+        "/", "/summarizer", "/summarize", "/analyze_sentiment", "/health", "/stats",
+        "/api/news", "/api/news/search", "/api/news/categories", "/api/news/summarize",
+        "/api/models/load", "/api/cache/clear", "/api/batch/summarize",
+        "/summarize_pegasus", "/summarize_bart"
     ]}), 404
 
 @app.errorhandler(500)
@@ -609,6 +1091,16 @@ def internal_error(error):
     """Handle 500 errors"""
     logger.error(f"Internal server error: {str(error)}")
     return jsonify({"error": "Internal server error"}), 500
+
+@app.errorhandler(413)
+def payload_too_large(error):
+    """Handle payload too large errors"""
+    return jsonify({"error": "Payload too large. Please reduce the size of your request."}), 413
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    """Handle rate limit errors"""
+    return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
 
 def initialize_models():
     """Initialize models in background"""
@@ -641,6 +1133,9 @@ def initialize_app():
     model_thread.start()
     
     logger.info("App initialization complete!")
+
+# Add some configuration for production
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file upload
 
 if __name__ == "__main__":
     initialize_app()
