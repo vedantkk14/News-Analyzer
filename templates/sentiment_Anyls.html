@@ -21,13 +21,10 @@
           </div>
         </div>
         <div class="nav-actions">
-          <button
-            class="theme-toggle"
-            onclick="toggleTheme()"
-            title="Toggle theme"
-          >
-            <span id="theme-icon">🌙</span>
-          </button>
+          <label class="theme-toggle" for="themeToggle" title="Toggle theme">
+            <input type="checkbox" id="themeToggle">
+            <span class="toggle-slider"></span>
+          </label>
           <a href="/summarizer" class="nav-btn">📄 Back to Summarizer</a>
           <a href="/" class="nav-btn">🏠 Home</a>
         </div>

@@ -12,14 +12,14 @@ function initTheme() {
 
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  const themeIcon = document.getElementById("theme-icon");
+  const themeToggle = document.getElementById("themeToggle");
 
   if (theme === "dark") {
-    themeIcon.textContent = "☀️";
-    themeIcon.parentElement.title = "Switch to light mode";
+    // Dark theme - checkbox unchecked
+    themeToggle.checked = false;
   } else {
-    themeIcon.textContent = "🌙";
-    themeIcon.parentElement.title = "Switch to dark mode";
+    // Light theme - checkbox checked
+    themeToggle.checked = true;
   }
 
   localStorage.setItem(THEME_KEY, theme);
@@ -35,6 +35,18 @@ function toggleTheme() {
 // Initialize theme on page load
 document.addEventListener("DOMContentLoaded", function () {
   initTheme();
+
+  // Add event listener for the new checkbox toggle
+  const themeToggle = document.getElementById("themeToggle");
+  themeToggle.addEventListener("change", function () {
+    if (this.checked) {
+      // Checked = Light theme
+      setTheme("light");
+    } else {
+      // Unchecked = Dark theme  
+      setTheme("dark");
+    }
+  });
 
   // Add animation delays for staggered appearance
   const cards = document.querySelectorAll(".result-card");

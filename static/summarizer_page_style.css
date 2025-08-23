@@ -1,17 +1,17 @@
 :root {
   /* Light mode variables */
-  --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 50%, #f3e8ff 100%);
+  --bg-gradient: linear-gradient(135deg,#6363d0 0%, #e0e7ff 50%, #8254b4 100%);
   --header-gradient: linear-gradient(
     135deg,
-    #1a1a2e 0%,
-    #16213e 50%,
-    #0f3460 100%
+    #aeaef4 0%,
+    #b561e0 50%,
+    #5a9ff2 100%
   );
   --header-text: white;
   --header-secondary: rgba(255, 255, 255, 0.8);
 
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --card-header-bg: linear-gradient(135deg, #f8faff, #f1f5ff);
+  --card-bg: rgb(242 242 242 / 95%);
+  --card-header-bg: linear-gradient(135deg, #f4f0e8, #f6f9ff);
   --card-text: #2d3748;
   --card-secondary: #718096;
   --card-border: rgba(102, 126, 234, 0.1);
